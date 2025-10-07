@@ -28,19 +28,24 @@ def duration(filename):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT)
     return float(result.stdout)
- 
+
+def get_mps_and_keys(api_url):
+    response = requests.get(api_url)
+    response_json = response.json()
+    mpd = response_json.get('MPD')
+    keys = response_json.get('KEYS')
+    return mpd, keys
+   
 def exec(cmd):
         process = subprocess.run(cmd, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         output = process.stdout.decode()
         print(output)
         return output
         #err = process.stdout.decode()
-
 def pull_run(work, cmds):
     with concurrent.futures.ThreadPoolExecutor(max_workers=work) as executor:
         print("Waiting for tasks to complete")
         fut = executor.map(exec,cmds)
-        
 async def aio(url,name):
     k = f'{name}.pdf'
     async with aiohttp.ClientSession() as session:
@@ -62,6 +67,16 @@ async def download(url,name):
                 await f.close()
     return ka
 
+async def pdf_download(url, file_name, chunk_size=1024 * 10):
+    if os.path.exists(file_name):
+        os.remove(file_name)
+    r = requests.get(url, allow_redirects=True, stream=True)
+    with open(file_name, 'wb') as fd:
+        for chunk in r.iter_content(chunk_size=chunk_size):
+            if chunk:
+                fd.write(chunk)
+    return file_name   
+   
 
 def parse_vid_info(info):
     info = info.strip()
@@ -82,6 +97,7 @@ def parse_vid_info(info):
             except:
                 pass
     return new_info
+
 
 def vid_info(info):
     info = info.strip()
